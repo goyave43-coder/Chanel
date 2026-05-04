@@ -7,32 +7,44 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 // 2. DONNÉES DE BASE
 const usineFrance = [46.2276, 2.2137];
 const warehouses = [
-    { id: 'WH_Europe', coords: [50.0, 10.0], stock: 5000, marker: null },
-    { id: 'WH_AmeriqueNord', coords: [40.0, -95.0], stock: 5000, marker: null },
-    { id: 'WH_AmeriqueSud', coords: [-15.0, -55.0], stock: 3000, marker: null },
-    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 6000, marker: null },
-    { id: 'WH_AfriqueMO', coords: [20.0, 25.0], stock: 2000, marker: null }
+    { id: 'WH_Europe', coords: [50.0, 10.0], stock: 4000, enAttenteLivraison: false, marker: null },
+    { id: 'WH_AmeriqueNord', coords: [40.0, -95.0], stock: 4000, enAttenteLivraison: false, marker: null },
+    { id: 'WH_AmeriqueSud', coords: [-15.0, -55.0], stock: 2000, enAttenteLivraison: false, marker: null },
+    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 5000, enAttenteLivraison: false, marker: null },
+    { id: 'WH_AfriqueMO', coords: [20.0, 25.0], stock: 2000, enAttenteLivraison: false, marker: null }
 ];
 
 let magasins = [];
 let lignesActives = [];
 let useWarehouses = false;
 
-// Variables pour les KPIs
+// Variables pour les KPIs et Seuils
 let totalCommandesClients = 0;
-let commandesSatisfaitesSLA = 0; // Satisfaites en moins de 24h
+let commandesSatisfaitesSLA = 0;
+let historiqueStockGlobal24h = []; // Garde les 24 dernières heures
+let seuilMagasin = 15;
+let seuilWarehouse = 1000;
+
+// Écouteurs pour les curseurs (mise à jour en direct)
+document.getElementById('seuilMagasin').addEventListener('input', (e) => {
+    seuilMagasin = parseInt(e.target.value);
+    document.getElementById('valSeuilMag').innerText = seuilMagasin;
+});
+document.getElementById('seuilWarehouse').addEventListener('input', (e) => {
+    seuilWarehouse = parseInt(e.target.value);
+    document.getElementById('valSeuilWh').innerText = seuilWarehouse;
+});
 
 // 3. GÉNÉRATION DES 100 MAGASINS
 warehouses.forEach(wh => {
     for (let i = 0; i < 20; i++) {
         let latOffset = (Math.random() - 0.5) * 35;
         let lngOffset = (Math.random() - 0.5) * 45;
-        
         magasins.push({
             id: `Mag_${wh.id}_${i}`,
             region: wh.id,
             coords: [wh.coords[0] + latOffset, wh.coords[1] + lngOffset],
-            stock: 50, // Stock historique élevé
+            stock: 50,
             enAttenteLivraison: false,
             marker: null
         });
@@ -40,20 +52,17 @@ warehouses.forEach(wh => {
 });
 
 // 4. AFFICHAGE DES MARQUEURS
-L.circleMarker(usineFrance, { radius: 10, color: 'black', fillColor: 'black', fillOpacity: 1 })
-    .addTo(map).bindPopup("<b>Usine (France)</b>");
+L.circleMarker(usineFrance, { radius: 10, color: 'black', fillColor: 'black', fillOpacity: 1 }).addTo(map).bindPopup("<b>Usine (France)</b>");
 
 warehouses.forEach(wh => {
     wh.marker = L.circleMarker(wh.coords, { radius: 8, color: 'green', fillColor: 'white', fillOpacity: 1, weight: 3 })
-        .addTo(map)
-        .bindPopup(`<b>${wh.id}</b><br>Stock global: <span id="popup-${wh.id}">${wh.stock}</span>`);
-    wh.marker.getElement().style.display = 'none'; // Cachés par défaut
+        .addTo(map).bindPopup(`<b>${wh.id}</b><br>Stock global: <span id="popup-${wh.id}">${wh.stock}</span>`);
+    wh.marker.getElement().style.display = 'none';
 });
 
 magasins.forEach(mag => {
     mag.marker = L.circleMarker(mag.coords, { radius: 4, color: '#ff66b2', fillColor: '#ffb6c1', fillOpacity: 0.7 })
-        .addTo(map)
-        .bindPopup(`<b>Magasin</b><br>Stock: <span id="popup-${mag.id}">${mag.stock}</span>`);
+        .addTo(map).bindPopup(`<b>Magasin</b><br>Stock: <span id="popup-${mag.id}">${mag.stock}</span>`);
 });
 
 // 5. GESTION DU BOUTON (AVANT / APRÈS)
@@ -62,86 +71,107 @@ document.getElementById('toggleWarehouse').addEventListener('change', function(e
     const statusText = document.getElementById('modeStatus');
     nettoyerLignes();
     
-    // Reset KPIs au changement de mode pour bien voir la différence
+    // Reset KPIs
     totalCommandesClients = 0;
     commandesSatisfaitesSLA = 0;
+    historiqueStockGlobal24h = []; // On réinitialise l'historique lors du changement de mode
 
     if (useWarehouses) {
         statusText.innerHTML = "<strong>APRÈS :</strong> Lissage via Warehouses";
-        log("Réseau activé. Remontée d'informations. Baisse des stocks magasins.");
+        log("Réseau activé. Les magasins réduisent leurs stocks de sécurité.");
         warehouses.forEach(wh => wh.marker.getElement().style.display = 'block');
         magasins.forEach(mag => {
-            mag.stock = 10; // Le magasin vide son stock car il a confiance
+            mag.stock = 15; 
             mag.marker.setStyle({ color: '#0066cc', fillColor: '#add8e6' });
         });
     } else {
         statusText.innerHTML = "<strong>AVANT :</strong> Flux tendu depuis l'usine";
-        log("Désactivation des Warehouses. Retour aux stocks de sécurité massifs.");
+        log("Désactivation des Warehouses. Retour aux stocks massifs.");
         warehouses.forEach(wh => wh.marker.getElement().style.display = 'none');
         magasins.forEach(mag => {
-            mag.stock = 50; // Le magasin sur-stocke pour palier la lenteur
+            mag.stock = 50; 
             mag.marker.setStyle({ color: '#ff66b2', fillColor: '#ffb6c1' });
         });
     }
     updateKPIs();
 });
 
-// 6. LE MOTEUR DE SIMULATION (Temps réel)
+// 6. LE MOTEUR DE SIMULATION
 setInterval(() => {
-    // A. Ventes aux clients (25 ventes aléatoires par "heure")
+    // A. Ventes aux clients
     for(let i=0; i<25; i++) {
         let randomMag = magasins[Math.floor(Math.random() * magasins.length)];
         totalCommandesClients++;
 
         if (randomMag.stock > 0) {
             randomMag.stock--;
-            commandesSatisfaitesSLA++; // Achat immédiat = Client très satisfait
+            commandesSatisfaitesSLA++; 
         } else {
-            // Rupture ! SLA dépend du temps de livraison
-            if (useWarehouses) {
-                commandesSatisfaitesSLA++; // WH livre en < 24h, SLA respecté
-            } else {
-                // France livre en 7 à 10 jours, SLA NON respecté
-            }
+            if (useWarehouses) commandesSatisfaitesSLA++; 
         }
     }
 
-    // B. Réapprovisionnement des magasins
+    // B. Réapprovisionnement des Magasins
     magasins.forEach(mag => {
-        let seuilAlerte = useWarehouses ? 5 : 20; 
+        // En mode "Avant", la panique force un réapprovisionnement constant (seuil très haut). En mode "Après", on utilise le curseur.
+        let seuilAlerte = useWarehouses ? seuilMagasin : 40; 
         
         if (mag.stock <= seuilAlerte && !mag.enAttenteLivraison) {
             mag.enAttenteLivraison = true;
             
             if (useWarehouses) {
-                // Via Warehouse (Rapide et lissé)
                 let parentWh = warehouses.find(w => w.id === mag.region);
-                parentWh.stock -= 20;
-                animerLivraison(parentWh.coords, mag.coords, 'green', mag, 20);
-                if(Math.random() > 0.96) log(`Réappro. rapide depuis Warehouse ${parentWh.id}`);
+                if(parentWh.stock > 20) {
+                    parentWh.stock -= 20;
+                    animerLivraison(parentWh.coords, mag.coords, 'green', mag, 20, false);
+                } else {
+                    mag.enAttenteLivraison = false; // Le WH est vide, le magasin attend !
+                }
             } else {
-                // Via Usine Centrale (Lent et massif)
-                animerLivraison(usineFrance, mag.coords, 'red', mag, 50);
-                if(Math.random() > 0.98) log(`Rupture imminente ! Commande d'urgence à l'usine.`);
+                animerLivraison(usineFrance, mag.coords, 'red', mag, 50, false);
             }
         }
     });
 
+    // C. Réapprovisionnement des Warehouses
+    if (useWarehouses) {
+        warehouses.forEach(wh => {
+            if (wh.stock <= seuilWarehouse && !wh.enAttenteLivraison) {
+                wh.enAttenteLivraison = true;
+                // Commande massive à l'usine en France
+                animerLivraison(usineFrance, wh.coords, 'purple', wh, 2000, true);
+                if(Math.random() > 0.5) log(`Warehouse ${wh.id} passe sous le seuil. Commande usine lancée.`);
+            }
+        });
+    }
+
+    // D. Calcul du Stock Global pour le KPI 24h
+    let totalStockMagasins = magasins.reduce((sum, mag) => sum + mag.stock, 0);
+    let totalStockWarehouses = useWarehouses ? warehouses.reduce((sum, wh) => sum + wh.stock, 0) : 0;
+    let stockMondialActuel = totalStockMagasins + totalStockWarehouses;
+    
+    historiqueStockGlobal24h.push(stockMondialActuel);
+    if (historiqueStockGlobal24h.length > 24) {
+        historiqueStockGlobal24h.shift(); // Retire la donnée la plus vieille (glissement sur 24 ticks)
+    }
+
     updateKPIs();
-}, 200); // Vitesse de la boucle
+}, 200);
 
 // 7. FONCTIONS UTILITAIRES
-function animerLivraison(depart, arrivee, couleur, magasin, quantiteLivree) {
-    let ligne = L.polyline([depart, arrivee], { color: couleur, weight: 1.5, opacity: 0.6 }).addTo(map);
+function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWarehouseReappro) {
+    let epaisseur = isWarehouseReappro ? 4 : 1.5; // Ligne plus épaisse pour les expéditions usine -> WH
+    let opacite = isWarehouseReappro ? 0.8 : 0.6;
+    let ligne = L.polyline([depart, arrivee], { color: couleur, weight: epaisseur, opacity: opacite, dashArray: isWarehouseReappro ? '5, 5' : '' }).addTo(map);
     lignesActives.push(ligne);
     
-    // Temps de trajet simulé (court pour WH, long pour France)
-    let tempsTrajet = useWarehouses ? 800 : 4000; 
+    // L'usine met beaucoup plus de temps à livrer un WH que le WH à livrer un magasin
+    let tempsTrajet = isWarehouseReappro ? 4000 : (useWarehouses ? 800 : 4000); 
 
     setTimeout(() => {
         map.removeLayer(ligne);
-        magasin.stock += quantiteLivree;
-        magasin.enAttenteLivraison = false;
+        cible.stock += quantiteLivree;
+        cible.enAttenteLivraison = false;
     }, tempsTrajet);
 }
 
@@ -159,29 +189,29 @@ function log(message) {
 }
 
 function updateKPIs() {
-    // Mise à jour Stock Moyen
-    let totalStock = magasins.reduce((sum, mag) => sum + mag.stock, 0);
-    document.getElementById('kpi-stock').innerText = Math.round(totalStock / magasins.length);
-
-    // Mise à jour Taux de Service
+    // 1. Taux de Service
     if (totalCommandesClients > 0) {
         let taux = (commandesSatisfaitesSLA / totalCommandesClients) * 100;
         let kpiElement = document.getElementById('kpi-service');
         kpiElement.innerText = taux.toFixed(1) + "%";
-        
-        // Code couleur pour l'alerte
-        if(taux < 85) kpiElement.style.color = "#d9534f"; // Rouge
-        else if(taux < 95) kpiElement.style.color = "#f0ad4e"; // Orange
-        else kpiElement.style.color = "#5cb85c"; // Vert
+        if(taux < 85) kpiElement.style.color = "#d9534f";
+        else if(taux < 95) kpiElement.style.color = "#f0ad4e";
+        else kpiElement.style.color = "#5cb85c";
+    }
+
+    // 2. Stock Moyen Magasin
+    let totalMag = magasins.reduce((sum, mag) => sum + mag.stock, 0);
+    document.getElementById('kpi-stock').innerText = Math.round(totalMag / magasins.length);
+
+    // 3. Stock Global Moyen 24h
+    if (historiqueStockGlobal24h.length > 0) {
+        let somme24h = historiqueStockGlobal24h.reduce((a, b) => a + b, 0);
+        let moyenne24h = somme24h / historiqueStockGlobal24h.length;
+        // toLocaleString() permet d'ajouter les espaces pour les milliers (ex: 12 500)
+        document.getElementById('kpi-global').innerText = Math.round(moyenne24h).toLocaleString('fr-FR');
     }
 
     // Mise à jour visuelle des bulles cliquées
-    magasins.forEach(mag => {
-        let el = document.getElementById(`popup-${mag.id}`);
-        if(el) el.innerText = mag.stock;
-    });
-    warehouses.forEach(wh => {
-        let el = document.getElementById(`popup-${wh.id}`);
-        if(el) el.innerText = wh.stock;
-    });
+    magasins.forEach(mag => { let el = document.getElementById(`popup-${mag.id}`); if(el) el.innerText = mag.stock; });
+    warehouses.forEach(wh => { let el = document.getElementById(`popup-${wh.id}`); if(el) el.innerText = wh.stock; });
 }
