@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation Supply Chain - Type C</title>
-    <!-- Chargement de Leaflet pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -22,16 +21,29 @@
                 <span class="slider round"></span>
             </label>
             <p id="modeStatus"><strong>AVANT :</strong> Flux tendu depuis l'usine (France)</p>
+            
+            <!-- NOUVEAU : Réglages des seuils -->
+            <div class="threshold-controls">
+                <label>Point de commande Magasin : <span id="valSeuilMag">15</span></label>
+                <input type="range" id="seuilMagasin" min="5" max="50" value="15">
+                
+                <label>Point de commande Warehouse : <span id="valSeuilWh">1000</span></label>
+                <input type="range" id="seuilWarehouse" min="200" max="4000" value="1000" step="100">
+            </div>
         </div>
 
         <div class="kpi-panel">
             <div class="kpi-box">
-                <h4>Taux de Service (< 24h)</h4>
+                <h4>Taux de Service</h4>
                 <div class="kpi-value" id="kpi-service">100%</div>
             </div>
             <div class="kpi-box">
-                <h4>Stock Moyen / Magasin</h4>
+                <h4>Stock Moy. Magasin</h4>
                 <div class="kpi-value" id="kpi-stock">50</div>
+            </div>
+            <div class="kpi-box">
+                <h4>Stock Global (24h)</h4>
+                <div class="kpi-value" id="kpi-global">0</div>
             </div>
         </div>
 
@@ -45,7 +57,6 @@
 
     <div id="map"></div>
 
-    <!-- Chargement des scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
