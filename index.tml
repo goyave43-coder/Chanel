@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outil de Simulation - Produits Type C</title>
+    <!-- Chargement de Leaflet pour la carte -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="sidebar">
+        <div class="logo-container">
+            <h2>Simulation Supply Chain</h2>
+            <p>Optimisation des produits de Type C</p>
+        </div>
+        
+        <div class="control-panel">
+            <h3>Mode de distribution</h3>
+            <label class="switch">
+                <input type="checkbox" id="toggleWarehouse">
+                <span class="slider round"></span>
+            </label>
+            <p id="modeStatus"><strong>ACTUEL :</strong> Flux tendu depuis l'usine (France)</p>
+        </div>
+
+        <div class="stats-panel">
+            <h3>Dynamique en direct</h3>
+            <ul id="logList">
+                <li>Initialisation : beaucoup de stock dans les magasins[cite: 1].</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Chargement des scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
