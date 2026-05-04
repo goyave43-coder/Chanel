@@ -12,8 +12,8 @@ body, html {
 
 /* LE PANNEAU LATÉRAL */
 #sidebar {
-    width: 320px;
-    min-width: 320px;
+    width: 340px; /* Légèrement élargi pour les 3 KPIs */
+    min-width: 340px;
     background-color: #fff;
     box-shadow: 2px 0 10px rgba(0,0,0,0.15);
     display: flex;
@@ -36,27 +36,49 @@ body, html {
     border-bottom: 1px solid #eee;
 }
 
+/* RÉGLAGES DES SEUILS (SLIDERS) */
+.threshold-controls {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+    font-size: 0.85rem;
+}
+.threshold-controls label {
+    display: block;
+    margin-bottom: 5px;
+    color: #444;
+    font-weight: bold;
+}
+.threshold-controls span {
+    color: #e83e8c;
+}
+.threshold-controls input[type=range] {
+    width: 100%;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+
 /* PANNEAU DES KPIS */
 .kpi-panel {
     display: flex;
     justify-content: space-between;
-    padding: 15px 20px;
+    padding: 15px 10px;
     background-color: #fafafa;
     border-bottom: 1px solid #eee;
 }
 
 .kpi-box {
     text-align: center;
-    width: 48%;
+    width: 31%;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 5px;
-    padding: 10px 0;
+    padding: 8px 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.kpi-box h4 { margin: 0; font-size: 0.7rem; color: #666; text-transform: uppercase; }
-.kpi-value { font-size: 1.4rem; font-weight: bold; color: #000; margin-top: 5px; }
+.kpi-box h4 { margin: 0; font-size: 0.60rem; color: #666; text-transform: uppercase; }
+.kpi-value { font-size: 1.1rem; font-weight: bold; color: #000; margin-top: 5px; }
 
 /* LA CARTE INTERACTIVE */
 #map {
