@@ -1,0 +1,75 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    background-color: #fceceb; /* Reprise de la teinte rosée de la présentation */
+}
+
+#sidebar {
+    width: 320px;
+    background-color: #fff;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.logo-container {
+    padding: 20px;
+    background-color: #000;
+    color: #fff;
+    text-align: center;
+}
+
+.logo-container h2 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;}
+.logo-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: #ccc;}
+
+.control-panel, .stats-panel {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+#map {
+    flex-grow: 1;
+    height: 100%;
+}
+
+/* Style du bouton Toggle (Switch) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px; width: 26px;
+    left: 4px; bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+input:checked + .slider { background-color: #000; }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
+
+#logList {
+    list-style-type: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #444;
+    max-height: 300px;
+    overflow-y: auto;
+}
+#logList li { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ddd; }
