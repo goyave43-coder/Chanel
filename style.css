@@ -1,31 +1,26 @@
-/* =========================================
-   STRUCTURE PRINCIPALE (Correction du bug d'affichage)
-========================================= */
+/* STRUCTURE PRINCIPALE */
 body, html {
     margin: 0;
     padding: 0;
-    height: 100vh; /* Force la hauteur à 100% de l'écran visible */
-    width: 100vw;  /* Force la largeur à 100% de l'écran visible */
+    height: 100vh;
+    width: 100vw;
     font-family: 'Helvetica Neue', Arial, sans-serif;
     display: flex;
-    background-color: #fceceb; /* Fond légèrement rosé */
-    overflow: hidden; /* Empêche les barres de défilement du navigateur */
+    background-color: #fceceb;
+    overflow: hidden;
 }
 
-/* =========================================
-   LE PANNEAU LATÉRAL (Sidebar de gauche)
-========================================= */
+/* LE PANNEAU LATÉRAL */
 #sidebar {
     width: 320px;
-    min-width: 320px; /* Empêche le menu de s'écraser si la fenêtre est petite */
+    min-width: 320px;
     background-color: #fff;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.15); /* Ombre douce pour détacher le menu de la carte */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
-    z-index: 1000; /* Assure que le menu reste toujours au-dessus de la carte */
+    z-index: 1000;
 }
 
-/* En-tête noir avec le titre */
 .logo-container {
     padding: 20px;
     background-color: #000;
@@ -33,37 +28,44 @@ body, html {
     text-align: center;
 }
 
-.logo-container h2 { 
-    margin: 0; 
-    font-size: 1.2rem; 
-    text-transform: uppercase; 
-    letter-spacing: 2px;
-}
+.logo-container h2 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;}
+.logo-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: #ccc;}
 
-.logo-container p { 
-    margin: 5px 0 0 0; 
-    font-size: 0.8rem; 
-    color: #ccc;
-}
-
-/* Conteneurs intérieurs du menu */
 .control-panel, .stats-panel {
     padding: 20px;
     border-bottom: 1px solid #eee;
 }
 
-/* =========================================
-   LA CARTE INTERACTIVE (Droite)
-========================================= */
+/* PANNEAU DES KPIS */
+.kpi-panel {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background-color: #fafafa;
+    border-bottom: 1px solid #eee;
+}
+
+.kpi-box {
+    text-align: center;
+    width: 48%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.kpi-box h4 { margin: 0; font-size: 0.7rem; color: #666; text-transform: uppercase; }
+.kpi-value { font-size: 1.4rem; font-weight: bold; color: #000; margin-top: 5px; }
+
+/* LA CARTE INTERACTIVE */
 #map {
-    flex: 1; /* Ordre crucial : dit à la carte de prendre tout l'espace restant */
+    flex: 1;
     height: 100%;
     z-index: 1;
 }
 
-/* =========================================
-   DESIGN DU BOUTON TOGGLE (Le Switch)
-========================================= */
+/* LE BOUTON TOGGLE */
 .switch {
     position: relative;
     display: inline-block;
@@ -71,13 +73,7 @@ body, html {
     height: 34px;
     margin-bottom: 10px;
 }
-
-.switch input { 
-    opacity: 0; 
-    width: 0; 
-    height: 0; 
-}
-
+.switch input { opacity: 0; width: 0; height: 0; }
 .slider {
     position: absolute;
     cursor: pointer;
@@ -85,7 +81,6 @@ body, html {
     background-color: #ccc;
     transition: .4s;
 }
-
 .slider:before {
     position: absolute;
     content: "";
@@ -94,45 +89,19 @@ body, html {
     background-color: white;
     transition: .4s;
 }
+input:checked + .slider { background-color: #000; }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
 
-/* Changement de couleur quand le bouton est activé (Warehouses ON) */
-input:checked + .slider { 
-    background-color: #000; 
-}
-
-input:checked + .slider:before { 
-    transform: translateX(26px); 
-}
-
-.slider.round { 
-    border-radius: 34px; 
-}
-
-.slider.round:before { 
-    border-radius: 50%; 
-}
-
-/* =========================================
-   LISTE DES ÉVÉNEMENTS EN DIRECT (Console)
-========================================= */
+/* LOGS EN DIRECT */
 #logList {
     list-style-type: none;
     padding: 0;
     font-size: 0.85rem;
     color: #444;
-    max-height: 400px; /* Hauteur max avant de pouvoir scroller */
+    max-height: 400px;
     overflow-y: auto;
 }
-
-#logList li { 
-    margin-bottom: 8px; 
-    padding-bottom: 8px; 
-    border-bottom: 1px dashed #ddd; 
-    line-height: 1.4;
-}
-
-#logList li em {
-    color: #888;
-    font-weight: bold;
-    font-style: normal;
-}
+#logList li { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ddd; line-height: 1.4; }
+#logList li em { color: #888; font-weight: bold; font-style: normal; }
