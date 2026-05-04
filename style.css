@@ -36,12 +36,14 @@ body, html {
     border-bottom: 1px solid #eee;
 }
 
-/* RÉGLAGES DES SEUILS (SLIDERS) */
+/* RÉGLAGES DES SEUILS ET LOTS (Ajout d'un scroll si écran trop petit) */
 .threshold-controls {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px dashed #ccc;
     font-size: 0.85rem;
+    max-height: 250px;
+    overflow-y: auto;
 }
 .threshold-controls label {
     display: block;
@@ -54,7 +56,7 @@ body, html {
 }
 .threshold-controls input[type=range] {
     width: 100%;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     cursor: pointer;
 }
 
