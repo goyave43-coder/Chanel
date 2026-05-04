@@ -4,14 +4,14 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
 
-// 2. DONNÉES DE BASE
+// 2. DONNÉES DE BASE (Retour au verrouillage strict : enAttenteLivraison)
 const usineFrance = [46.2276, 2.2137];
 const warehouses = [
-    { id: 'WH_Europe', coords: [48.0, 15.0], stock: 500, enCommande: 0, marker: null }, 
-    { id: 'WH_AmeriqueNord', coords: [40.0, -100.0], stock: 500, enCommande: 0, marker: null }, 
-    { id: 'WH_AmeriqueSud', coords: [-10.0, -55.0], stock: 500, enCommande: 0, marker: null }, 
-    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 500, enCommande: 0, marker: null }, 
-    { id: 'WH_AfriqueMO', coords: [15.0, 20.0], stock: 500, enCommande: 0, marker: null } 
+    { id: 'WH_Europe', coords: [48.0, 15.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AmeriqueNord', coords: [40.0, -100.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AmeriqueSud', coords: [-10.0, -55.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AfriqueMO', coords: [15.0, 20.0], stock: 500, enAttenteLivraison: false, marker: null } 
 ];
 
 let magasins = [];
@@ -59,7 +59,7 @@ warehouses.forEach(wh => {
             region: wh.id,
             coords: [wh.coords[0] + latOffset, wh.coords[1] + lngOffset],
             stock: lotMagasin * 2, 
-            enCommande: 0,
+            enAttenteLivraison: false, // Verrouillage par magasin
             marker: null
         });
     }
@@ -91,6 +91,10 @@ document.getElementById('toggleWarehouse').addEventListener('change', function(e
     historiqueSatisfaites24h = [];
     historiqueStockGlobal24h = []; 
 
+    // On réinitialise les verrous pour éviter qu'un magasin reste bloqué lors du changement de mode
+    magasins.forEach(mag => mag.enAttenteLivraison = false);
+    warehouses.forEach(wh => wh.enAttenteLivraison = false);
+
     if (useWarehouses) {
         statusText.innerHTML = "<strong>APRÈS :</strong> Lissage via Warehouses";
         log("Réseau activé.");
@@ -116,26 +120,22 @@ function simulationLoop() {
     let commandesHeureActuelle = 0;
     let satisfaitesHeureActuelle = 0;
 
-    // A. Ventes aux clients (La logique sans triche)
+    // A. Ventes aux clients
     for(let i=0; i<25; i++) {
         let randomMag = magasins[Math.floor(Math.random() * magasins.length)];
         commandesHeureActuelle++;
 
         if (randomMag.stock > 0) {
-            // Le magasin a du stock, vente immédiate
             randomMag.stock--;
             satisfaitesHeureActuelle++; 
         } else {
             // RUPTURE MAGASIN
             if (useWarehouses) {
-                // Le client veut son produit en moins de 24h. 
-                // Il l'obtient SEULEMENT si le Warehouse de sa région a du stock !
                 let parentWh = warehouses.find(w => w.id === randomMag.region);
                 if (parentWh.stock > 0) {
-                    parentWh.stock--; // Expédition d'urgence 1 unité
+                    parentWh.stock--; 
                     satisfaitesHeureActuelle++; 
                 }
-                // Si le WH est à 0, le délai passe à 8 jours (Usine). Le client est perdu.
             }
         }
     }
@@ -147,34 +147,33 @@ function simulationLoop() {
         historiqueSatisfaites24h.shift();
     }
 
-    // B. Réapprovisionnement des Magasins
+    // B. Réapprovisionnement des Magasins (AVEC VERROUILLAGE STRICT)
     magasins.forEach(mag => {
-        if ((mag.stock + mag.enCommande) <= seuilMagasin) {
-            mag.enCommande += lotMagasin;
+        // La condition vérifie si le stock est bas ET si aucune livraison n'est déjà en cours
+        if (mag.stock <= seuilMagasin && !mag.enAttenteLivraison) {
+            mag.enAttenteLivraison = true; // Verrouillage activé !
             
             if (useWarehouses) {
                 let parentWh = warehouses.find(w => w.id === mag.region);
                 if(parentWh.stock >= lotMagasin) { 
                     parentWh.stock -= lotMagasin;
-                    // Départ direct du Warehouse (rapide)
                     animerLivraison(parentWh.coords, mag.coords, 'green', mag, lotMagasin, false);
                 } else {
-                    mag.enCommande -= lotMagasin; // Échec de la commande, le magasin réessaiera l'heure prochaine
+                    mag.enAttenteLivraison = false; // Le WH est vide, le verrou saute pour réessayer plus tard
                 }
             } else {
-                // Commande à l'usine. Délai de production de 2 heures avant expédition.
                 declencherProductionUsine(mag, lotMagasin, 'red', false);
             }
         }
     });
 
-    // C. Réapprovisionnement des Warehouses
+    // C. Réapprovisionnement des Warehouses (AVEC VERROUILLAGE STRICT)
     if (useWarehouses) {
         warehouses.forEach(wh => {
-            if ((wh.stock + wh.enCommande) <= seuilWarehouse) {
-                wh.enCommande += lotWarehouse;
+            // Un Warehouse ne peut passer qu'une seule commande à la fois
+            if (wh.stock <= seuilWarehouse && !wh.enAttenteLivraison) {
+                wh.enAttenteLivraison = true; // Verrouillage activé !
                 if(Math.random() > 0.5) log(`Alerte: ${wh.id} sous le seuil. Usine démarre prod de ${lotWarehouse} unités.`);
-                // Commande à l'usine avec délai de production
                 declencherProductionUsine(wh, lotWarehouse, 'purple', true);
             }
         });
@@ -194,17 +193,16 @@ function simulationLoop() {
 
 // 7. FONCTIONS UTILITAIRES & LOGISTIQUE
 
-// Fonction qui simule les 2 heures (2 ticks) de production à l'Usine
+// Fonction simulant la production
 function declencherProductionUsine(cible, quantite, couleur, isWarehouseReappro) {
-    let tempsProductionMs = (2 * TICK_BASE_MS) / speedMultiplier; // 2 heures in-game
+    let tempsProductionMs = (2 * TICK_BASE_MS) / speedMultiplier; 
     
     setTimeout(() => {
-        // La production est finie, le camion/bateau part de France
         animerLivraison(usineFrance, cible.coords, couleur, cible, quantite, isWarehouseReappro);
     }, tempsProductionMs);
 }
 
-// Fonction qui gère le temps de trajet sur la carte
+// Fonction gérant l'animation du trajet
 function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWarehouseReappro) {
     let offsetLat = (Math.random() - 0.5) * 1.5;
     let offsetLng = (Math.random() - 0.5) * 1.5;
@@ -224,9 +222,6 @@ function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWare
     
     lignesActives.push(ligne);
     
-    // TEMPS DE TRAJET RÉALISTE :
-    // Depuis l'Usine : 35000ms de base (~ 7 jours in-game)
-    // Depuis le WH : 2000ms de base (~ 10 heures in-game)
     let tempsTrajetDeBase;
     if (depart === usineFrance) {
         tempsTrajetDeBase = 35000;
@@ -236,13 +231,14 @@ function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWare
 
     let tempsTrajetReel = tempsTrajetDeBase / speedMultiplier;
 
+    // Arrivée de la marchandise
     setTimeout(() => {
         map.removeLayer(ligne);
         let index = lignesActives.indexOf(ligne);
         if (index > -1) { lignesActives.splice(index, 1); }
 
         cible.stock += quantiteLivree;
-        cible.enCommande -= quantiteLivree;
+        cible.enAttenteLivraison = false; // FIN DU VERROUILLAGE ! La cible peut à nouveau commander
     }, tempsTrajetReel);
 }
 
