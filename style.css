@@ -1,21 +1,31 @@
+/* =========================================
+   STRUCTURE PRINCIPALE (Correction du bug d'affichage)
+========================================= */
 body, html {
     margin: 0;
     padding: 0;
-    height: 100%;
+    height: 100vh; /* Force la hauteur à 100% de l'écran visible */
+    width: 100vw;  /* Force la largeur à 100% de l'écran visible */
     font-family: 'Helvetica Neue', Arial, sans-serif;
     display: flex;
-    background-color: #fceceb; /* Reprise de la teinte rosée de la présentation */
+    background-color: #fceceb; /* Fond légèrement rosé */
+    overflow: hidden; /* Empêche les barres de défilement du navigateur */
 }
 
+/* =========================================
+   LE PANNEAU LATÉRAL (Sidebar de gauche)
+========================================= */
 #sidebar {
     width: 320px;
+    min-width: 320px; /* Empêche le menu de s'écraser si la fenêtre est petite */
     background-color: #fff;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.15); /* Ombre douce pour détacher le menu de la carte */
     display: flex;
     flex-direction: column;
-    z-index: 1000;
+    z-index: 1000; /* Assure que le menu reste toujours au-dessus de la carte */
 }
 
+/* En-tête noir avec le titre */
 .logo-container {
     padding: 20px;
     background-color: #000;
@@ -23,27 +33,51 @@ body, html {
     text-align: center;
 }
 
-.logo-container h2 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;}
-.logo-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: #ccc;}
+.logo-container h2 { 
+    margin: 0; 
+    font-size: 1.2rem; 
+    text-transform: uppercase; 
+    letter-spacing: 2px;
+}
 
+.logo-container p { 
+    margin: 5px 0 0 0; 
+    font-size: 0.8rem; 
+    color: #ccc;
+}
+
+/* Conteneurs intérieurs du menu */
 .control-panel, .stats-panel {
     padding: 20px;
     border-bottom: 1px solid #eee;
 }
 
+/* =========================================
+   LA CARTE INTERACTIVE (Droite)
+========================================= */
 #map {
-    flex-grow: 1;
+    flex: 1; /* Ordre crucial : dit à la carte de prendre tout l'espace restant */
     height: 100%;
+    z-index: 1;
 }
 
-/* Style du bouton Toggle (Switch) */
+/* =========================================
+   DESIGN DU BOUTON TOGGLE (Le Switch)
+========================================= */
 .switch {
     position: relative;
     display: inline-block;
     width: 60px;
     height: 34px;
+    margin-bottom: 10px;
 }
-.switch input { opacity: 0; width: 0; height: 0; }
+
+.switch input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+
 .slider {
     position: absolute;
     cursor: pointer;
@@ -51,6 +85,7 @@ body, html {
     background-color: #ccc;
     transition: .4s;
 }
+
 .slider:before {
     position: absolute;
     content: "";
@@ -59,17 +94,45 @@ body, html {
     background-color: white;
     transition: .4s;
 }
-input:checked + .slider { background-color: #000; }
-input:checked + .slider:before { transform: translateX(26px); }
-.slider.round { border-radius: 34px; }
-.slider.round:before { border-radius: 50%; }
 
+/* Changement de couleur quand le bouton est activé (Warehouses ON) */
+input:checked + .slider { 
+    background-color: #000; 
+}
+
+input:checked + .slider:before { 
+    transform: translateX(26px); 
+}
+
+.slider.round { 
+    border-radius: 34px; 
+}
+
+.slider.round:before { 
+    border-radius: 50%; 
+}
+
+/* =========================================
+   LISTE DES ÉVÉNEMENTS EN DIRECT (Console)
+========================================= */
 #logList {
     list-style-type: none;
     padding: 0;
     font-size: 0.85rem;
     color: #444;
-    max-height: 300px;
+    max-height: 400px; /* Hauteur max avant de pouvoir scroller */
     overflow-y: auto;
 }
-#logList li { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ddd; }
+
+#logList li { 
+    margin-bottom: 8px; 
+    padding-bottom: 8px; 
+    border-bottom: 1px dashed #ddd; 
+    line-height: 1.4;
+}
+
+#logList li em {
+    color: #888;
+    font-weight: bold;
+    font-style: normal;
+}
