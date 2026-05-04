@@ -18,9 +18,9 @@ let magasins = [];
 let lignesActives = [];
 let useWarehouses = false;
 
-// Variables pour les KPIs
-let totalCommandesClients = 0;
-let commandesSatisfaitesSLA = 0;
+// Variables pour les KPIs (Nouvelle gestion sur 24h)
+let historiqueCommandes24h = [];
+let historiqueSatisfaites24h = [];
 let historiqueStockGlobal24h = []; 
 
 // Variables pour les Paramètres Réglables
@@ -28,8 +28,6 @@ let seuilMagasin = parseInt(document.getElementById('seuilMagasin').value) || 5;
 let lotMagasin = parseInt(document.getElementById('lotMagasin').value) || 15;
 let seuilWarehouse = parseInt(document.getElementById('seuilWarehouse').value) || 300;
 let lotWarehouse = parseInt(document.getElementById('lotWarehouse').value) || 400;
-
-// NOUVEAU : Multiplicateur de vitesse
 let speedMultiplier = parseInt(document.getElementById('vitesseSimu').value) || 1;
 
 // Écouteurs pour les curseurs
@@ -45,7 +43,6 @@ document.getElementById('seuilWarehouse').addEventListener('input', (e) => {
 document.getElementById('lotWarehouse').addEventListener('input', (e) => {
     lotWarehouse = parseInt(e.target.value); document.getElementById('valLotWh').innerText = lotWarehouse;
 });
-// NOUVEAU : Écouteur pour la vitesse
 document.getElementById('vitesseSimu').addEventListener('input', (e) => {
     speedMultiplier = parseInt(e.target.value); document.getElementById('valVitesse').innerText = "x" + speedMultiplier;
 });
@@ -88,8 +85,9 @@ document.getElementById('toggleWarehouse').addEventListener('change', function(e
     const statusText = document.getElementById('modeStatus');
     nettoyerLignes();
     
-    totalCommandesClients = 0;
-    commandesSatisfaitesSLA = 0;
+    // Réinitialisation des historiques au changement de mode
+    historiqueCommandes24h = [];
+    historiqueSatisfaites24h = [];
     historiqueStockGlobal24h = []; 
 
     if (useWarehouses) {
@@ -112,19 +110,32 @@ document.getElementById('toggleWarehouse').addEventListener('change', function(e
     updateKPIs();
 });
 
-// 6. LE MOTEUR DE SIMULATION (Remplacé par une boucle adaptative)
+// 6. LE MOTEUR DE SIMULATION
 function simulationLoop() {
+    let commandesHeureActuelle = 0;
+    let satisfaitesHeureActuelle = 0;
+
     // A. Ventes aux clients
     for(let i=0; i<25; i++) {
         let randomMag = magasins[Math.floor(Math.random() * magasins.length)];
-        totalCommandesClients++;
+        commandesHeureActuelle++;
 
         if (randomMag.stock > 0) {
             randomMag.stock--;
-            commandesSatisfaitesSLA++; 
+            satisfaitesHeureActuelle++; 
         } else {
-            if (useWarehouses) commandesSatisfaitesSLA++; 
+            // Si la livraison est < 24h (Warehouse), le client est quand même satisfait
+            if (useWarehouses) satisfaitesHeureActuelle++; 
         }
+    }
+
+    // Sauvegarde des commandes de l'heure en cours
+    historiqueCommandes24h.push(commandesHeureActuelle);
+    historiqueSatisfaites24h.push(satisfaitesHeureActuelle);
+
+    if (historiqueCommandes24h.length > 24) {
+        historiqueCommandes24h.shift();
+        historiqueSatisfaites24h.shift();
     }
 
     // B. Réapprovisionnement des Magasins
@@ -169,7 +180,6 @@ function simulationLoop() {
 
     updateKPIs();
 
-    // Relance la boucle en divisant le délai de base (200ms) par le multiplicateur
     setTimeout(simulationLoop, 200 / speedMultiplier);
 }
 
@@ -180,13 +190,11 @@ function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWare
     let ligne = L.polyline([depart, arrivee], { color: couleur, weight: epaisseur, opacity: opacite, dashArray: isWarehouseReappro ? '5, 5' : '' }).addTo(map);
     lignesActives.push(ligne);
     
-    // Le temps d'animation est lui aussi divisé par la vitesse de simulation
     let tempsTrajetDeBase = isWarehouseReappro ? 4000 : (useWarehouses ? 800 : 4000); 
     let tempsTrajetReel = tempsTrajetDeBase / speedMultiplier;
 
     setTimeout(() => {
         map.removeLayer(ligne);
-        // Si l'élément cible est un Array on retire de la liste actives (nettoyage)
         let index = lignesActives.indexOf(ligne);
         if (index > -1) { lignesActives.splice(index, 1); }
 
@@ -209,8 +217,12 @@ function log(message) {
 }
 
 function updateKPIs() {
-    if (totalCommandesClients > 0) {
-        let taux = (commandesSatisfaitesSLA / totalCommandesClients) * 100;
+    // Calcul Taux de Service 24h
+    let totalCmd24h = historiqueCommandes24h.reduce((a, b) => a + b, 0);
+    let totalSat24h = historiqueSatisfaites24h.reduce((a, b) => a + b, 0);
+
+    if (totalCmd24h > 0) {
+        let taux = (totalSat24h / totalCmd24h) * 100;
         let kpiElement = document.getElementById('kpi-service');
         kpiElement.innerText = taux.toFixed(1) + "%";
         if(taux < 85) kpiElement.style.color = "#d9534f";
@@ -218,18 +230,21 @@ function updateKPIs() {
         else kpiElement.style.color = "#5cb85c";
     }
 
+    // Calcul Stock Moyen Magasin
     let totalMag = magasins.reduce((sum, mag) => sum + mag.stock, 0);
     document.getElementById('kpi-stock').innerText = Math.round(totalMag / magasins.length);
 
+    // Calcul Stock Global 24h
     if (historiqueStockGlobal24h.length > 0) {
         let somme24h = historiqueStockGlobal24h.reduce((a, b) => a + b, 0);
         let moyenne24h = somme24h / historiqueStockGlobal24h.length;
         document.getElementById('kpi-global').innerText = Math.round(moyenne24h).toLocaleString('fr-FR');
     }
 
+    // Maj visuelle des popups de la carte
     magasins.forEach(mag => { let el = document.getElementById(`popup-${mag.id}`); if(el) el.innerText = mag.stock; });
     warehouses.forEach(wh => { let el = document.getElementById(`popup-${wh.id}`); if(el) el.innerText = wh.stock; });
 }
 
-// LANCEMENT INITIAL DU MOTEUR DE SIMULATION
+// LANCEMENT DE LA SIMULATION
 simulationLoop();
