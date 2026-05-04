@@ -4,7 +4,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
 
-// 2. DONNÉES DE BASE (Stock des Warehouses initialisé à 500)
+// 2. DONNÉES DE BASE
 const usineFrance = [46.2276, 2.2137];
 const warehouses = [
     { id: 'WH_Europe', coords: [48.0, 15.0], stock: 500, enAttenteLivraison: false, marker: null }, 
@@ -23,28 +23,31 @@ let totalCommandesClients = 0;
 let commandesSatisfaitesSLA = 0;
 let historiqueStockGlobal24h = []; 
 
-// Variables pour les Paramètres Réglables (Initialisés depuis le HTML)
+// Variables pour les Paramètres Réglables
 let seuilMagasin = parseInt(document.getElementById('seuilMagasin').value) || 5;
 let lotMagasin = parseInt(document.getElementById('lotMagasin').value) || 15;
 let seuilWarehouse = parseInt(document.getElementById('seuilWarehouse').value) || 300;
 let lotWarehouse = parseInt(document.getElementById('lotWarehouse').value) || 400;
 
-// Écouteurs pour les curseurs (mise à jour instantanée)
+// NOUVEAU : Multiplicateur de vitesse
+let speedMultiplier = parseInt(document.getElementById('vitesseSimu').value) || 1;
+
+// Écouteurs pour les curseurs
 document.getElementById('seuilMagasin').addEventListener('input', (e) => {
-    seuilMagasin = parseInt(e.target.value);
-    document.getElementById('valSeuilMag').innerText = seuilMagasin;
+    seuilMagasin = parseInt(e.target.value); document.getElementById('valSeuilMag').innerText = seuilMagasin;
 });
 document.getElementById('lotMagasin').addEventListener('input', (e) => {
-    lotMagasin = parseInt(e.target.value);
-    document.getElementById('valLotMag').innerText = lotMagasin;
+    lotMagasin = parseInt(e.target.value); document.getElementById('valLotMag').innerText = lotMagasin;
 });
 document.getElementById('seuilWarehouse').addEventListener('input', (e) => {
-    seuilWarehouse = parseInt(e.target.value);
-    document.getElementById('valSeuilWh').innerText = seuilWarehouse;
+    seuilWarehouse = parseInt(e.target.value); document.getElementById('valSeuilWh').innerText = seuilWarehouse;
 });
 document.getElementById('lotWarehouse').addEventListener('input', (e) => {
-    lotWarehouse = parseInt(e.target.value);
-    document.getElementById('valLotWh').innerText = lotWarehouse;
+    lotWarehouse = parseInt(e.target.value); document.getElementById('valLotWh').innerText = lotWarehouse;
+});
+// NOUVEAU : Écouteur pour la vitesse
+document.getElementById('vitesseSimu').addEventListener('input', (e) => {
+    speedMultiplier = parseInt(e.target.value); document.getElementById('valVitesse').innerText = "x" + speedMultiplier;
 });
 
 // 3. GÉNÉRATION DES 100 MAGASINS
@@ -109,8 +112,8 @@ document.getElementById('toggleWarehouse').addEventListener('change', function(e
     updateKPIs();
 });
 
-// 6. LE MOTEUR DE SIMULATION
-setInterval(() => {
+// 6. LE MOTEUR DE SIMULATION (Remplacé par une boucle adaptative)
+function simulationLoop() {
     // A. Ventes aux clients
     for(let i=0; i<25; i++) {
         let randomMag = magasins[Math.floor(Math.random() * magasins.length)];
@@ -165,7 +168,10 @@ setInterval(() => {
     }
 
     updateKPIs();
-}, 200);
+
+    // Relance la boucle en divisant le délai de base (200ms) par le multiplicateur
+    setTimeout(simulationLoop, 200 / speedMultiplier);
+}
 
 // 7. FONCTIONS UTILITAIRES
 function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWarehouseReappro) {
@@ -174,13 +180,19 @@ function animerLivraison(depart, arrivee, couleur, cible, quantiteLivree, isWare
     let ligne = L.polyline([depart, arrivee], { color: couleur, weight: epaisseur, opacity: opacite, dashArray: isWarehouseReappro ? '5, 5' : '' }).addTo(map);
     lignesActives.push(ligne);
     
-    let tempsTrajet = isWarehouseReappro ? 4000 : (useWarehouses ? 800 : 4000); 
+    // Le temps d'animation est lui aussi divisé par la vitesse de simulation
+    let tempsTrajetDeBase = isWarehouseReappro ? 4000 : (useWarehouses ? 800 : 4000); 
+    let tempsTrajetReel = tempsTrajetDeBase / speedMultiplier;
 
     setTimeout(() => {
         map.removeLayer(ligne);
+        // Si l'élément cible est un Array on retire de la liste actives (nettoyage)
+        let index = lignesActives.indexOf(ligne);
+        if (index > -1) { lignesActives.splice(index, 1); }
+
         cible.stock += quantiteLivree;
         cible.enAttenteLivraison = false;
-    }, tempsTrajet);
+    }, tempsTrajetReel);
 }
 
 function nettoyerLignes() {
@@ -218,3 +230,6 @@ function updateKPIs() {
     magasins.forEach(mag => { let el = document.getElementById(`popup-${mag.id}`); if(el) el.innerText = mag.stock; });
     warehouses.forEach(wh => { let el = document.getElementById(`popup-${wh.id}`); if(el) el.innerText = wh.stock; });
 }
+
+// LANCEMENT INITIAL DU MOTEUR DE SIMULATION
+simulationLoop();
