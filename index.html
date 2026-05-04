@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outil de Simulation - Produits Type C</title>
+    <title>Simulation Supply Chain - Type C</title>
     <!-- Chargement de Leaflet pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
@@ -11,7 +11,7 @@
 <body>
     <div id="sidebar">
         <div class="logo-container">
-            <h2>Simulation Supply Chain</h2>
+            <h2>SIMULATION SUPPLY CHAIN</h2>
             <p>Optimisation des produits de Type C</p>
         </div>
         
@@ -21,13 +21,24 @@
                 <input type="checkbox" id="toggleWarehouse">
                 <span class="slider round"></span>
             </label>
-            <p id="modeStatus"><strong>ACTUEL :</strong> Flux tendu depuis l'usine (France)</p>
+            <p id="modeStatus"><strong>AVANT :</strong> Flux tendu depuis l'usine (France)</p>
+        </div>
+
+        <div class="kpi-panel">
+            <div class="kpi-box">
+                <h4>Taux de Service (< 24h)</h4>
+                <div class="kpi-value" id="kpi-service">100%</div>
+            </div>
+            <div class="kpi-box">
+                <h4>Stock Moyen / Magasin</h4>
+                <div class="kpi-value" id="kpi-stock">50</div>
+            </div>
         </div>
 
         <div class="stats-panel">
             <h3>Dynamique en direct</h3>
             <ul id="logList">
-                <li>Initialisation : beaucoup de stock dans les magasins[cite: 1].</li>
+                <li>Initialisation de la simulation...</li>
             </ul>
         </div>
     </div>
