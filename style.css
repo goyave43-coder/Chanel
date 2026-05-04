@@ -36,7 +36,7 @@ body, html {
     border-bottom: 1px solid #eee;
 }
 
-/* RÉGLAGES DES SEUILS ET LOTS (Ajout d'un scroll si écran trop petit) */
+/* RÉGLAGES DES SEUILS ET LOTS */
 .threshold-controls {
     margin-top: 15px;
     padding-top: 15px;
