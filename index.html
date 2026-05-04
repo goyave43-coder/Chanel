@@ -22,7 +22,6 @@
             </label>
             <p id="modeStatus"><strong>AVANT :</strong> Flux tendu depuis l'usine (France)</p>
             
-            <!-- Réglages complets (Seuils + Lots) -->
             <div class="threshold-controls">
                 <label>Point de commande Magasin : <span id="valSeuilMag">5</span></label>
                 <input type="range" id="seuilMagasin" min="2" max="50" value="5">
@@ -37,6 +36,11 @@
 
                 <label>Taille de Lot Warehouse : <span id="valLotWh">400</span></label>
                 <input type="range" id="lotWarehouse" min="100" max="5000" value="400" step="50">
+
+                <!-- NOUVEAU : Réglage de la vitesse -->
+                <hr style="border: 0; border-top: 1px dashed #ddd; margin: 10px 0;">
+                <label>Vitesse de simulation : <span id="valVitesse">x1</span></label>
+                <input type="range" id="vitesseSimu" min="1" max="10" value="1" step="1">
             </div>
         </div>
 
