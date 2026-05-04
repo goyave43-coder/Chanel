@@ -1,99 +1,148 @@
-// Initialisation de la carte (centrée sur l'Europe/Atlantique)
-const map = L.map('map').setView([30, 0], 2);
+// 1. INITIALISATION DE LA CARTE
+const map = L.map('map').setView([25, 0], 2);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
 
-// Coordonnées (Fictives pour l'illustration globale)
+// 2. DONNÉES DE BASE
 const usineFrance = [46.2276, 2.2137];
 const warehouses = [
-    { id: 'WH_Ameriques', coords: [39.0, -95.0] },
-    { id: 'WH_Asie', coords: [34.0, 100.0] }
-];
-const magasins = [
-    { id: 'Mag_NY', coords: [40.7128, -74.0060], region: 'WH_Ameriques', stock: 100, marker: null },
-    { id: 'Mag_Rio', coords: [-22.9068, -43.1729], region: 'WH_Ameriques', stock: 100, marker: null },
-    { id: 'Mag_Tokyo', coords: [35.6762, 139.6503], region: 'WH_Asie', stock: 100, marker: null },
-    { id: 'Mag_Singapour', coords: [1.3521, 103.8198], region: 'WH_Asie', stock: 100, marker: null }
+    { id: 'WH_Europe', coords: [50.0, 10.0], stock: 5000, marker: null },
+    { id: 'WH_AmeriqueNord', coords: [40.0, -95.0], stock: 5000, marker: null },
+    { id: 'WH_AmeriqueSud', coords: [-15.0, -55.0], stock: 3000, marker: null },
+    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 6000, marker: null },
+    { id: 'WH_AfriqueMO', coords: [20.0, 25.0], stock: 2000, marker: null }
 ];
 
-let useWarehouses = false;
+let magasins = [];
 let lignesActives = [];
+let useWarehouses = false;
 
-// Icône usine
-L.circleMarker(usineFrance, { radius: 10, color: 'black', fillColor: 'black', fillOpacity: 1 }).addTo(map).bindPopup("Usine (France)");
+// Variables pour les KPIs
+let totalCommandesClients = 0;
+let commandesSatisfaitesSLA = 0; // Satisfaites en moins de 24h
 
-// Initialisation des marqueurs magasins
-magasins.forEach(mag => {
-    // Stock important représenté par un grand cercle rose (Avant)[cite: 1].
-    mag.marker = L.circleMarker(mag.coords, { radius: 15, color: '#ff66b2', fillColor: '#ffb6c1', fillOpacity: 0.7 }).addTo(map);
+// 3. GÉNÉRATION DES 100 MAGASINS
+warehouses.forEach(wh => {
+    for (let i = 0; i < 20; i++) {
+        let latOffset = (Math.random() - 0.5) * 35;
+        let lngOffset = (Math.random() - 0.5) * 45;
+        
+        magasins.push({
+            id: `Mag_${wh.id}_${i}`,
+            region: wh.id,
+            coords: [wh.coords[0] + latOffset, wh.coords[1] + lngOffset],
+            stock: 50, // Stock historique élevé
+            enAttenteLivraison: false,
+            marker: null
+        });
+    }
 });
 
-// Écouteur du bouton Toggle
+// 4. AFFICHAGE DES MARQUEURS
+L.circleMarker(usineFrance, { radius: 10, color: 'black', fillColor: 'black', fillOpacity: 1 })
+    .addTo(map).bindPopup("<b>Usine (France)</b>");
+
+warehouses.forEach(wh => {
+    wh.marker = L.circleMarker(wh.coords, { radius: 8, color: 'green', fillColor: 'white', fillOpacity: 1, weight: 3 })
+        .addTo(map)
+        .bindPopup(`<b>${wh.id}</b><br>Stock global: <span id="popup-${wh.id}">${wh.stock}</span>`);
+    wh.marker.getElement().style.display = 'none'; // Cachés par défaut
+});
+
+magasins.forEach(mag => {
+    mag.marker = L.circleMarker(mag.coords, { radius: 4, color: '#ff66b2', fillColor: '#ffb6c1', fillOpacity: 0.7 })
+        .addTo(map)
+        .bindPopup(`<b>Magasin</b><br>Stock: <span id="popup-${mag.id}">${mag.stock}</span>`);
+});
+
+// 5. GESTION DU BOUTON (AVANT / APRÈS)
 document.getElementById('toggleWarehouse').addEventListener('change', function(e) {
     useWarehouses = e.target.checked;
     const statusText = document.getElementById('modeStatus');
-    const logList = document.getElementById('logList');
-    
     nettoyerLignes();
+    
+    // Reset KPIs au changement de mode pour bien voir la différence
+    totalCommandesClients = 0;
+    commandesSatisfaitesSLA = 0;
 
     if (useWarehouses) {
-        statusText.innerHTML = "<strong>APRÈS :</strong> Lissage des stocks via Warehouses";
-        log(logList, "Remontée d'informations depuis les Warehouse activée[cite: 1].");
-        log(logList, "Commande uniquement quand il y a un manque[cite: 1].");
-        
-        // Affichage des Warehouses et flux d'informations (vert)[cite: 1].
-        warehouses.forEach(wh => {
-            L.circleMarker(wh.coords, { radius: 8, color: 'green', fillColor: 'white', fillOpacity: 1, weight: 3 }).addTo(map);
-            tracerLigne(usineFrance, wh.coords, 'green', '5, 5'); // Ligne pointillée verte pour l'information
-            tracerLigne(usineFrance, wh.coords, 'red', ''); // Ligne rouge pour la matière
-        });
-
-        // Les magasins passent en "stock faible" (petit cercle bleu)[cite: 1].
+        statusText.innerHTML = "<strong>APRÈS :</strong> Lissage via Warehouses";
+        log("Réseau activé. Remontée d'informations. Baisse des stocks magasins.");
+        warehouses.forEach(wh => wh.marker.getElement().style.display = 'block');
         magasins.forEach(mag => {
-            mag.stock = 20; 
-            mag.marker.setStyle({ radius: 6, color: '#0066cc', fillColor: '#add8e6' });
-            const parentWh = warehouses.find(w => w.id === mag.region);
-            tracerLigne(parentWh.coords, mag.coords, 'red', '');
+            mag.stock = 10; // Le magasin vide son stock car il a confiance
+            mag.marker.setStyle({ color: '#0066cc', fillColor: '#add8e6' });
         });
-
     } else {
-        statusText.innerHTML = "<strong>AVANT :</strong> Flux tendu depuis l'usine (France)";
-        log(logList, "Désactivation des Warehouses. Retour aux difficultés d'envoi[cite: 1].");
-        
-        // Retour au stock important (rose) et flux directs de matière (rouge)[cite: 1].
+        statusText.innerHTML = "<strong>AVANT :</strong> Flux tendu depuis l'usine";
+        log("Désactivation des Warehouses. Retour aux stocks de sécurité massifs.");
+        warehouses.forEach(wh => wh.marker.getElement().style.display = 'none');
         magasins.forEach(mag => {
-            mag.stock = 100;
-            mag.marker.setStyle({ radius: 15, color: '#ff66b2', fillColor: '#ffb6c1' });
-            tracerLigne(usineFrance, mag.coords, 'red', '');
+            mag.stock = 50; // Le magasin sur-stocke pour palier la lenteur
+            mag.marker.setStyle({ color: '#ff66b2', fillColor: '#ffb6c1' });
         });
-        
-        // Recharger la page ou supprimer les marqueurs WH manuellement pour un vrai "reset" (simplifié ici)
-        setTimeout(() => location.reload(), 1500); 
     }
+    updateKPIs();
 });
 
-// Simulation "en live" des ventes aléatoires
+// 6. LE MOTEUR DE SIMULATION (Temps réel)
 setInterval(() => {
-    const logList = document.getElementById('logList');
-    const randomMag = magasins[Math.floor(Math.random() * magasins.length)];
-    const vente = Math.floor(Math.random() * 3) + 1;
-    
-    randomMag.stock -= vente;
-    
-    if (useWarehouses && randomMag.stock <= 5) {
-        log(logList, `${randomMag.id} : Réapprovisionnement rapide depuis le Warehouse local.`);
-        randomMag.stock += 15; // Lissage
-    } else if (!useWarehouses && randomMag.stock <= 20) {
-        log(logList, `${randomMag.id} : Alerte ! Commande massive envoyée à l'usine. Délai de livraison long.`);
-        randomMag.stock += 80; // Surstockage forcé
-    }
-}, 3000);
+    // A. Ventes aux clients (25 ventes aléatoires par "heure")
+    for(let i=0; i<25; i++) {
+        let randomMag = magasins[Math.floor(Math.random() * magasins.length)];
+        totalCommandesClients++;
 
-// Fonctions utilitaires
-function tracerLigne(depart, arrivee, couleur, dashArray) {
-    const ligne = L.polyline([depart, arrivee], { color: couleur, weight: 2, dashArray: dashArray }).addTo(map);
+        if (randomMag.stock > 0) {
+            randomMag.stock--;
+            commandesSatisfaitesSLA++; // Achat immédiat = Client très satisfait
+        } else {
+            // Rupture ! SLA dépend du temps de livraison
+            if (useWarehouses) {
+                commandesSatisfaitesSLA++; // WH livre en < 24h, SLA respecté
+            } else {
+                // France livre en 7 à 10 jours, SLA NON respecté
+            }
+        }
+    }
+
+    // B. Réapprovisionnement des magasins
+    magasins.forEach(mag => {
+        let seuilAlerte = useWarehouses ? 5 : 20; 
+        
+        if (mag.stock <= seuilAlerte && !mag.enAttenteLivraison) {
+            mag.enAttenteLivraison = true;
+            
+            if (useWarehouses) {
+                // Via Warehouse (Rapide et lissé)
+                let parentWh = warehouses.find(w => w.id === mag.region);
+                parentWh.stock -= 20;
+                animerLivraison(parentWh.coords, mag.coords, 'green', mag, 20);
+                if(Math.random() > 0.96) log(`Réappro. rapide depuis Warehouse ${parentWh.id}`);
+            } else {
+                // Via Usine Centrale (Lent et massif)
+                animerLivraison(usineFrance, mag.coords, 'red', mag, 50);
+                if(Math.random() > 0.98) log(`Rupture imminente ! Commande d'urgence à l'usine.`);
+            }
+        }
+    });
+
+    updateKPIs();
+}, 200); // Vitesse de la boucle
+
+// 7. FONCTIONS UTILITAIRES
+function animerLivraison(depart, arrivee, couleur, magasin, quantiteLivree) {
+    let ligne = L.polyline([depart, arrivee], { color: couleur, weight: 1.5, opacity: 0.6 }).addTo(map);
     lignesActives.push(ligne);
+    
+    // Temps de trajet simulé (court pour WH, long pour France)
+    let tempsTrajet = useWarehouses ? 800 : 4000; 
+
+    setTimeout(() => {
+        map.removeLayer(ligne);
+        magasin.stock += quantiteLivree;
+        magasin.enAttenteLivraison = false;
+    }, tempsTrajet);
 }
 
 function nettoyerLignes() {
@@ -101,8 +150,38 @@ function nettoyerLignes() {
     lignesActives = [];
 }
 
-function log(element, message) {
+function log(message) {
+    const logList = document.getElementById('logList');
     const li = document.createElement('li');
     li.innerHTML = `<em>${new Date().toLocaleTimeString()}</em> : ${message}`;
-    element.prepend(li);
+    logList.prepend(li);
+    if(logList.children.length > 40) logList.lastChild.remove();
+}
+
+function updateKPIs() {
+    // Mise à jour Stock Moyen
+    let totalStock = magasins.reduce((sum, mag) => sum + mag.stock, 0);
+    document.getElementById('kpi-stock').innerText = Math.round(totalStock / magasins.length);
+
+    // Mise à jour Taux de Service
+    if (totalCommandesClients > 0) {
+        let taux = (commandesSatisfaitesSLA / totalCommandesClients) * 100;
+        let kpiElement = document.getElementById('kpi-service');
+        kpiElement.innerText = taux.toFixed(1) + "%";
+        
+        // Code couleur pour l'alerte
+        if(taux < 85) kpiElement.style.color = "#d9534f"; // Rouge
+        else if(taux < 95) kpiElement.style.color = "#f0ad4e"; // Orange
+        else kpiElement.style.color = "#5cb85c"; // Vert
+    }
+
+    // Mise à jour visuelle des bulles cliquées
+    magasins.forEach(mag => {
+        let el = document.getElementById(`popup-${mag.id}`);
+        if(el) el.innerText = mag.stock;
+    });
+    warehouses.forEach(wh => {
+        let el = document.getElementById(`popup-${wh.id}`);
+        if(el) el.innerText = wh.stock;
+    });
 }
