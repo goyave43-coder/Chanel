@@ -4,14 +4,14 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
 
-// 2. DONNÉES DE BASE
+// 2. DONNÉES DE BASE (Stock des Warehouses initialisé à 500)
 const usineFrance = [46.2276, 2.2137];
 const warehouses = [
-    { id: 'WH_Europe', coords: [48.0, 15.0], stock: 4000, enAttenteLivraison: false, marker: null }, 
-    { id: 'WH_AmeriqueNord', coords: [40.0, -100.0], stock: 4000, enAttenteLivraison: false, marker: null }, 
-    { id: 'WH_AmeriqueSud', coords: [-10.0, -55.0], stock: 2000, enAttenteLivraison: false, marker: null }, 
-    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 5000, enAttenteLivraison: false, marker: null }, 
-    { id: 'WH_AfriqueMO', coords: [15.0, 20.0], stock: 2000, enAttenteLivraison: false, marker: null } 
+    { id: 'WH_Europe', coords: [48.0, 15.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AmeriqueNord', coords: [40.0, -100.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AmeriqueSud', coords: [-10.0, -55.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_Asie', coords: [35.0, 105.0], stock: 500, enAttenteLivraison: false, marker: null }, 
+    { id: 'WH_AfriqueMO', coords: [15.0, 20.0], stock: 500, enAttenteLivraison: false, marker: null } 
 ];
 
 let magasins = [];
@@ -47,17 +47,16 @@ document.getElementById('lotWarehouse').addEventListener('input', (e) => {
     document.getElementById('valLotWh').innerText = lotWarehouse;
 });
 
-// 3. GÉNÉRATION DES 100 MAGASINS (Éparpillement global autorisé)
+// 3. GÉNÉRATION DES 100 MAGASINS
 warehouses.forEach(wh => {
     for (let i = 0; i < 20; i++) {
-        // Multiplicateur très grand pour les disperser partout dans le monde
         let latOffset = (Math.random() - 0.5) * 80;
         let lngOffset = (Math.random() - 0.5) * 120;
         magasins.push({
             id: `Mag_${wh.id}_${i}`,
             region: wh.id,
             coords: [wh.coords[0] + latOffset, wh.coords[1] + lngOffset],
-            stock: lotMagasin * 2, // Le stock initial est basé sur le lot pour éviter la rupture immédiate
+            stock: lotMagasin * 2, 
             enAttenteLivraison: false,
             marker: null
         });
@@ -127,20 +126,18 @@ setInterval(() => {
 
     // B. Réapprovisionnement des Magasins
     magasins.forEach(mag => {
-        // Le magasin commande STRICTEMENT quand il atteint le seuil défini par le curseur
         if (mag.stock <= seuilMagasin && !mag.enAttenteLivraison) {
             mag.enAttenteLivraison = true;
             
             if (useWarehouses) {
                 let parentWh = warehouses.find(w => w.id === mag.region);
-                if(parentWh.stock >= lotMagasin) { // Vérifie si l'entrepôt a assez de stock pour envoyer un lot entier
+                if(parentWh.stock >= lotMagasin) { 
                     parentWh.stock -= lotMagasin;
                     animerLivraison(parentWh.coords, mag.coords, 'green', mag, lotMagasin, false);
                 } else {
-                    mag.enAttenteLivraison = false; // Le WH est vide, le magasin ne peut pas être livré !
+                    mag.enAttenteLivraison = false; 
                 }
             } else {
-                // Flux direct depuis la France (long)
                 animerLivraison(usineFrance, mag.coords, 'red', mag, lotMagasin, false);
             }
         }
@@ -149,10 +146,8 @@ setInterval(() => {
     // C. Réapprovisionnement des Warehouses
     if (useWarehouses) {
         warehouses.forEach(wh => {
-            // Le Warehouse commande STRICTEMENT quand il atteint le seuil défini par le curseur
             if (wh.stock <= seuilWarehouse && !wh.enAttenteLivraison) {
                 wh.enAttenteLivraison = true;
-                // Commande le lot exact défini par le curseur
                 animerLivraison(usineFrance, wh.coords, 'purple', wh, lotWarehouse, true);
                 if(Math.random() > 0.5) log(`Warehouse ${wh.id} sous les ${seuilWarehouse}. Commande de ${lotWarehouse} unités.`);
             }
